@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Text Encryption Tool</title>
+    <script src="https://rawgit.com/kawanet/msgpack-lite/master/dist/msgpack.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+      body {
+        font-family: "Poppins", sans-serif;
+        background: linear-gradient(135deg, #0d1b2a, #1b263b);
+        color: white;
+        text-align: center;
+        padding: 20px;
+      }
+      .container {
+        background: rgba(65, 90, 119, 0.2);
+        backdrop-filter: blur(10px);
+        border-radius: 15px;
+        padding: 40px;
+        box-shadow: 0 0 20px rgba(0, 168, 232, 0.2);
+        width: 60%;
+        margin: auto;
+        max-width: 600px;
+      }
+      select,
+      input,
+      button {
+        margin: 10px;
+        padding: 12px;
+        font-size: 16px;
+        border-radius: 8px;
+        border: none;
+        outline: none;
+      }
+      input {
+        background: rgba(255, 255, 255, 0.15);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+      }
+      input::placeholder {
+        color: rgba(255, 255, 255, 0.8);
+      }
+      select {
+        background: rgba(255, 255, 255, 0.15);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        cursor: pointer;
+      }
+      select option {
+        background: #1b263b;
+        color: white;
+      }
+      button {
+        background: linear-gradient(135deg, #00a8e8, #0077b6);
+        color: white;
+        font-weight: bold;
+        transition: 0.3s ease-in-out;
+        cursor: pointer;
+        box-shadow: 0 0 10px rgba(0, 168, 232, 0.5);
+      }
+      button:hover {
+        background: linear-gradient(135deg, #0077b6, #00a8e8);
+        transform: scale(1.05);
+      }
+      #output {
+        font-weight: bold;
+        color: #00a8e8;
+        margin-top: 20px;
+        background: rgba(0, 0, 0, 0.3);
+        padding: 15px;
+        border-radius: 5px;
+        word-wrap: break-word;
+        min-height: 40px;
+        font-size: 18px;
+      }
+      .error {
+        color: red;
+        font-weight: bold;
+        margin-top: 10px;
+      }
+      .copy-btn {
+        display: none;
+      }
+      #secretKeyContainer {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>🔒 Text Encryption & Decryption Tool</h2>
+      <label for="method">Choose Encryption Method:</label>
+      <select id="method" onchange="toggleSecretKey()">
+        <option value="caesar">Caesar Cipher</option>
+        <option value="base64">Base64</option>
+        <option value="aes">AES-256</option>
+        <option value="aespack">AES-256 + Msgpack</option>
+        <option value="sha256">SHA-256 (Hashing)</option>
+      </select>
+      <br />
+      <input type="text" id="inputText" placeholder="Enter text here" />
+      <br />
+      <div id="secretKeyContainer">
+        <input
+          type="text"
+          id="secretKey"
+          placeholder="Enter secret key (AES only)"
+        />
+        <br />
+      </div>
+      <button onclick="encryptText()">Encrypt</button>
+      <button onclick="decryptText()">Decrypt</button>
+      <br />
+      <h3>Result:</h3>
+      <p id="output">Awaiting encryption...</p>
+      <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+      <p id="error" class="error"></p>
+    </div>
+
+    <script>
+      function encrypt(payload) {
+        let packedData = msgpack.encode(payload);
+        let iv = CryptoJS.lib.WordArray.random(16); 
+        let key = CryptoJS.enc.Utf8.parse(document.getElementById("secretKey").value);
+        let packedWordArray = CryptoJS.lib.WordArray.create(packedData); 
+        let encrypted = CryptoJS.AES.encrypt(packedWordArray, key, {
+            iv: iv,
+            mode: CryptoJS.mode.CBC,
+            padding: CryptoJS.pad.Pkcs7
+        });
+
+        let combined = iv.concat(encrypted.ciphertext);
+        return CryptoJS.enc.Base64.stringify(combined);
+    }
+
+    function decrypt(encryptedBase64) {
+        let key = CryptoJS.enc.Utf8.parse(document.getElementById("secretKey").value);
+        let encryptedData = CryptoJS.enc.Base64.parse(encryptedBase64); 
+        let iv = CryptoJS.lib.WordArray.create(encryptedData.words.slice(0, 4));
+        let ciphertext = CryptoJS.lib.WordArray.create(encryptedData.words.slice(4)); 
+
+        let decrypted = CryptoJS.AES.decrypt({ ciphertext: ciphertext }, key, {
+            iv: iv,
+            mode: CryptoJS.mode.CBC,
+            padding: CryptoJS.pad.Pkcs7
+        });
+
+        let decryptedBytes = new Uint8Array(decrypted.words.length * 4);
+        for (let i = 0; i < decrypted.words.length; i++) {
+            decryptedBytes[i * 4] = (decrypted.words[i] >> 24) & 0xff;
+            decryptedBytes[i * 4 + 1] = (decrypted.words[i] >> 16) & 0xff;
+            decryptedBytes[i * 4 + 2] = (decrypted.words[i] >> 8) & 0xff;
+            decryptedBytes[i * 4 + 3] = decrypted.words[i] & 0xff;
+        }
+
+        return msgpack.decode(decryptedBytes);
+    }
+
+    </script>
+    <script>
+      function toggleSecretKey() {
+        document.getElementById("secretKeyContainer").style.display =
+          document.getElementById("method").value.includes("aes") ? "block" : "none";
+      }
+
+      function caesarCipher(str, shift) {
+        return str.replace(/[a-zA-Z]/g, function (char) {
+          let offset = char >= "a" ? 97 : 65;
+          return String.fromCharCode(
+            ((char.charCodeAt(0) - offset + shift + 26) % 26) + offset
+          );
+        });
+      }
+
+      function encryptText() {
+        let text = document.getElementById("inputText").value;
+        let method = document.getElementById("method").value;
+        let key = document.getElementById("secretKey").value;
+        let output = document.getElementById("output");
+        let error = document.getElementById("error");
+        error.textContent = "";
+
+        if (!text) {
+          error.textContent = "Please enter text to encrypt.";
+          return;
+        }
+
+        if (method === "caesar") {
+          output.textContent = caesarCipher(text, 3);
+        } else if (method === "base64") {
+          output.textContent = btoa(unescape(encodeURIComponent(text)));
+        } else if (method === "aes") {
+          if (!key) {
+            error.textContent = "Please enter a secret key for AES encryption.";
+            return;
+          }
+          output.textContent = CryptoJS.AES.encrypt(text, key).toString();
+        } else if (method === "aespack") {
+          if (!key) {
+            error.textContent = "Please enter a secret key for AES encryption.";
+            return;
+          }
+          output.textContent = encrypt(text);
+        } else if (method === "sha256") {
+          output.textContent = CryptoJS.SHA256(text).toString();
+        }
+      }
+
+      function decryptText() {
+        let text = document.getElementById("inputText").value;
+        let method = document.getElementById("method").value;
+        let key = document.getElementById("secretKey").value;
+        let output = document.getElementById("output");
+        let error = document.getElementById("error");
+        error.textContent = "";
+
+        if (!text) {
+          error.textContent = "Please enter text to decrypt.";
+          return;
+        }
+
+        if (method === "caesar") {
+          output.textContent = caesarCipher(text, -3);
+        } else if (method === "base64") {
+          try {
+            output.textContent = decodeURIComponent(escape(atob(text)));
+          } catch (e) {
+            error.textContent = "Invalid Base64 input!";
+          }
+        } else if (method === "aes") {
+          if (!key) {
+            error.textContent = "Please enter a secret key for AES decryption.";
+            return;
+          }
+          let decrypted = CryptoJS.AES.decrypt(text, key).toString(
+            CryptoJS.enc.Utf8
+          );
+          output.textContent = decrypted ? decrypted : "Invalid key!";
+        } else if (method === "aespack") {
+          if (!key) {
+            error.textContent = "Please enter a secret key for AES encryption.";
+            return;
+          }
+          let decrypted = decrypt(text)
+          output.textContent = decrypted ? decrypted : "Invalid key!";
+        } else if (method === "sha256") {
+          error.textContent =
+            "SHA-256 is a one-way hash and cannot be decrypted.";
+        }
+      }
+    </script>
+  </body>
+</html>
+
