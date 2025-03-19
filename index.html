@@ -155,7 +155,7 @@
             decryptedBytes[i * 4 + 3] = decrypted.words[i] & 0xff;
         }
 
-        return msgpack.decode(decryptedBytes);
+        return JSON.stringify(msgpack.decode(decryptedBytes));
     }
 
     </script>
