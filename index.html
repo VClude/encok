@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Text Encryption Tool</title>
+    <title>Ilmu Kodok Suaka Marga Satwa</title>
     <script src="https://rawgit.com/kawanet/msgpack-lite/master/dist/msgpack.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
@@ -65,7 +65,6 @@
         transform: scale(1.05);
       }
       #output {
-        font-weight: bold;
         color: #00a8e8;
         margin-top: 20px;
         background: rgba(0, 0, 0, 0.3);
@@ -73,7 +72,6 @@
         border-radius: 5px;
         word-wrap: break-word;
         min-height: 40px;
-        font-size: 18px;
       }
       .error {
         color: red;
@@ -86,14 +84,24 @@
       #secretKeyContainer {
         display: none;
       }
+      pre {
+        text-align: left !important;
+        white-space: pre-wrap; /* Preserve formatting */
+        font-family: monospace; /* Monospaced font for readability */
+        background: #f4f4f4; /* Light gray background */
+        padding: 10px;
+        border-radius: 5px;
+        border: 1px solid #ddd;
+        overflow-x: auto; /* Scroll if JSON is too wide */
+    }
     </style>
   </head>
   <body>
     <div class="container">
-      <h2>🔒 Text Encryption & Decryption Tool</h2>
+      <h2>🐸 Ilmu Kodok 🐸</h2>
       <label for="method">Choose Encryption Method:</label>
       <select id="method" onchange="toggleSecretKey()">
-        <option value="caesar">Caesar Cipher</option>
+        <option value="cesar">Caesar Cipher</option>
         <option value="base64">Base64</option>
         <option value="aes">AES-256</option>
         <option value="aespack">AES-256 + Msgpack</option>
@@ -114,9 +122,12 @@
       <button onclick="decryptText()">Decrypt</button>
       <br />
       <h3>Result:</h3>
-      <p id="output">Awaiting encryption...</p>
+      <pre id="output"></pre>
       <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
       <p id="error" class="error"></p>
+      <br>
+      <button onclick="copy()">Copy Text</button>
+
     </div>
 
     <script>
@@ -155,7 +166,7 @@
             decryptedBytes[i * 4 + 3] = decrypted.words[i] & 0xff;
         }
 
-        return JSON.stringify(msgpack.decode(decryptedBytes));
+        return JSON.stringify(JSON.parse(JSON.stringify(msgpack.decode(decryptedBytes))), null, 4);
     }
 
     </script>
@@ -187,7 +198,7 @@
           return;
         }
 
-        if (method === "caesar") {
+        if (method === "cesar") {
           output.textContent = caesarCipher(text, 3);
         } else if (method === "base64") {
           output.textContent = btoa(unescape(encodeURIComponent(text)));
@@ -221,7 +232,7 @@
           return;
         }
 
-        if (method === "caesar") {
+        if (method === "cesar") {
           output.textContent = caesarCipher(text, -3);
         } else if (method === "base64") {
           try {
@@ -251,6 +262,17 @@
         }
       }
     </script>
+     <script>
+       function copy() {
+        const copyText = document.getElementById("output").textContent.trim();
+        const textarea = document.createElement("textarea");
+        textarea.value = copyText;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+    }
+  </script>
   </body>
 </html>
 
